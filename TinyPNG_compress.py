@@ -1,7 +1,7 @@
 ##############################
 # Script to compress images with TinyPNG
 # API: https://tinypng.com/developers/reference/python
-# inputs: 1) photos (after resizing with resize.py gimp plug-in), located by default in <src dir>/out
+# inputs: 1) photos (after resizing with resize.py gimp plug-in), located by default in <src dir>/resized
 #		  2) API key from TinyPNG. You can get an API key at https://tinypng.com/developers, which lets you run
 #				up to 500 compressions/resizes per month.
 # outputs: tinyPNG compressed jpg files in output folder
