@@ -15,7 +15,8 @@ class App:
 		self.options = Options(root, self)
 		self.menu = AppMenu(root, self)
 
-		root.state('zoomed')
+		root.geometry('810x450')
+		root.minsize(width=810, height=350)
 
 		root.grid_columnconfigure(0, weight=1, uniform="a")
 		root.grid_columnconfigure(1, weight=1, uniform="a")
@@ -94,7 +95,7 @@ class FileDisplay:
 		self.select_files_button.pack(anchor=Tkinter.NW)
 
 		self.scrollbar = Tkinter.Scrollbar(self.frame)
-		self.txt = Tkinter.Text(self.frame, yscrollcommand=self.scrollbar.set, state=Tkinter.DISABLED)
+		self.txt = Tkinter.Text(self.frame, yscrollcommand=self.scrollbar.set, width=45, state=Tkinter.DISABLED)
 		self.txt.pack(fill=Tkinter.BOTH, side=Tkinter.LEFT, pady=5)
 		self.scrollbar.pack(side=Tkinter.LEFT, fill=Tkinter.Y, pady=5)
 		self.scrollbar.config(command=self.txt.yview)
