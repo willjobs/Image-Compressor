@@ -91,7 +91,7 @@ class FileDisplay:
 		self.select_files_button.pack(anchor=Tkinter.NW)
 
 		self.scrollbar = Tkinter.Scrollbar(self.frame)
-		self.txt = Tkinter.Text(self.frame, yscrollcommand=self.scrollbar.set)
+		self.txt = Tkinter.Text(self.frame, yscrollcommand=self.scrollbar.set, state=Tkinter.DISABLED)
 		self.txt.pack(fill=Tkinter.BOTH, side=Tkinter.LEFT, pady=5)
 		self.scrollbar.pack(side=Tkinter.LEFT, fill=Tkinter.Y, pady=5)
 		self.scrollbar.config(command=self.txt.yview)
