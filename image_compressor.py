@@ -51,6 +51,9 @@ def restore_EXIF_tags(orig_file, final_file):
 
 def resize_and_compress(files, out_dir):
 	make_sure_path_exists(out_dir)
+
+	out_files = []
+
 	# keep track of disk space savings
 	total_size_preresize = total_size_postresize = total_size_postcompress = 0
 
@@ -78,8 +81,9 @@ def resize_and_compress(files, out_dir):
 
 
 		# (out_dir + filename (without extension) + "_small" + extension)
-		out_file = out_dir + os.path.splitext(os.path.basename(file))[0] + '_small' \
+		out_file = out_dir + '/' + os.path.splitext(os.path.basename(file))[0] + '_small' \
 					+ os.path.splitext(file)[1]
+		out_files.append(out_file)
 		im.save(out_file)
 
 		final_size = os.stat(out_file).st_size/1024.
@@ -100,8 +104,7 @@ def resize_and_compress(files, out_dir):
 	else:
 		
 		# NOTE: we're now using the output from the resizing step as the input to this step
-		files = glob.glob(out_dir + '/*.jpg')
-		for idx, file in enumerate(files):
+		for idx, file in enumerate(out_files):
 			for attempt in range(5):
 				try:
 					print 'Compressing "' + os.path.basename(file) + '" (' + str(idx+1) + ' of ' + str(len(files)) + ')... ',
@@ -117,8 +120,7 @@ def resize_and_compress(files, out_dir):
 					source.to_file(file)
 
 					# restore EXIF tags (destroyed by PIL)
-					# orig_file: remove the "_small" suffix and add the extension back on
-					restore_EXIF_tags(orig_file = in_dir + os.path.splitext(os.path.basename(file))[0][:-6] + os.path.splitext(file)[1],
+					restore_EXIF_tags(orig_file = files[idx],
 									final_file = file)
 
 					
@@ -142,3 +144,5 @@ def resize_and_compress(files, out_dir):
 
 		print 'Resizing and compressing together saved ' + str(round(total_size_preresize - total_size_postcompress,0)) + ' KB = ' \
 				+ str(round((total_size_preresize - total_size_postcompress) * 100 / total_size_preresize, 1)) + '%'
+
+		return True

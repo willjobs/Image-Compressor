@@ -1,4 +1,4 @@
-import Tkinter, tkFileDialog, sys
+import Tkinter, tkFileDialog, tkMessageBox, sys
 from PIL import Image, ImageTk
 from image_compressor import resize_and_compress
 
@@ -29,8 +29,7 @@ class AppMenu:
 	def select_files(self):
 		global selected_files
 		selected_files = tkFileDialog.askopenfilenames(**self.opt)
-		if len(selected_files) > 0:
-			file_display.display()
+		file_display.display()
 
 	def select_files_key(self, event):
 		self.select_files()
@@ -38,8 +37,7 @@ class AppMenu:
 	def select_dir(self):
 		global out_directory
 		out_directory = tkFileDialog.askdirectory()
-		if out_directory != '':
-			options.display_dir()
+		options.display_dir()
 
 	def select_dir_key(self, event):
 		self.select_dir()
@@ -55,9 +53,10 @@ class FileDisplay:
 
 
 		self.label = Tkinter.Label(self.frame)
-		self.txt = Tkinter.Text(self.frame)
+		self.txt = Tkinter.Text(self.frame, state=Tkinter.DISABLED)
 		self.scrollbar = Tkinter.Scrollbar(self.frame)
 
+		self.display()
 
 	def display(self):
 		self.label.destroy()
@@ -70,11 +69,13 @@ class FileDisplay:
 		self.scrollbar = Tkinter.Scrollbar(self.frame)
 		self.txt = Tkinter.Text(self.frame, yscrollcommand=self.scrollbar.set)
 
-		self.txt.insert(Tkinter.END, selected_files[0])
-		for file in selected_files[1:]:
-			self.txt.insert(Tkinter.END, '\n' + file)
+		if len(selected_files) > 0:
+			self.txt.insert(Tkinter.END, selected_files[0])
+			for file in selected_files[1:]:
+				self.txt.insert(Tkinter.END, '\n' + file)
 
 		self.txt.pack(fill=Tkinter.BOTH, side=Tkinter.LEFT)
+		self.txt.config(state=Tkinter.DISABLED)
 		self.scrollbar.pack(side=Tkinter.LEFT, fill=Tkinter.Y)
 		self.scrollbar.config(command=self.txt.yview)
 
@@ -87,7 +88,9 @@ class Options:
 		self.execute_button.grid(row=1, column=0, sticky='sw')
 
 		self.out_dir_label = Tkinter.Label(self.frame)
-		self.out_dir = Tkinter.Text(self.frame)
+		self.out_dir = Tkinter.Text(self.frame, state=Tkinter.DISABLED)
+
+		self.display_dir()
 
 	def display_dir(self):
 		self.out_dir_label.destroy()
@@ -97,10 +100,20 @@ class Options:
 		self.out_dir_label.grid(row=0, column=0, sticky='w')
 		self.out_dir = Tkinter.Text(self.frame, height=1)
 		self.out_dir.insert(Tkinter.END, out_directory)
+		self.out_dir.config(state=Tkinter.DISABLED)
 		self.out_dir.grid(row=0, column=1, sticky='w')
 
 	def execute(self):
-		resize_and_compress(selected_files, out_directory)
+		if len(selected_files) > 0:
+			if out_directory != '':
+				if resize_and_compress(selected_files, out_directory):
+					tkMessageBox.showinfo("Compression successful", "Success!")
+				else:
+					tkMessageBox.showerror("Error", "An error occurred.")
+			else:
+				tkMessageBox.showerror("Error", "Select an out directory.")
+		else:
+			tkMessageBox.showerror("Error", "Select some files.")
 
 if __name__=='__main__':
 	root = Tkinter.Tk()
