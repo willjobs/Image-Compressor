@@ -15,7 +15,7 @@ class App:
 		self.options = Options(root, self)
 		self.menu = AppMenu(root, self)
 
-		root.geometry('800x450')
+		root.state('zoomed')
 
 		root.grid_columnconfigure(0, weight=1, uniform="a")
 		root.grid_columnconfigure(1, weight=1, uniform="a")
