@@ -35,8 +35,11 @@ class App:
 		#as enhancement, consider adding ability to ADD/REMOVE files, rather than simply replacing
 
 	def select_dir(self):
-		self.out_directory = tkFileDialog.askdirectory()
-		self.options.display_dir(self)
+		o = tkFileDialog.askdirectory()
+		#if user clicked cancel, we won't remove previously chosen folder
+		if o != '':
+			self.out_directory = o
+			self.options.display_dir(self)
 
 	def execute(self):
 		self.tinykey = self.options.key.get()
