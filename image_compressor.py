@@ -19,7 +19,7 @@ import errno  # used to check exception error number
 import tinify  # accesses TinyPNG API
 import pyexiv2  # to restore EXIF tags after PIL strips them
 
-tinify.key = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+tinify.key = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" #default
 
 # function taken from http://stackoverflow.com/a/5032238
 def make_sure_path_exists(path):
@@ -49,8 +49,9 @@ def restore_EXIF_tags(orig_file, final_file):
 		except pyexiv2.exif.ExifValueError:
 			pass
 
-def resize_and_compress(files, out_dir):
+def resize_and_compress(files, out_dir, key):
 	make_sure_path_exists(out_dir)
+	tinify.key = key
 
 	out_files = []
 
