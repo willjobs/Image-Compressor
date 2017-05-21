@@ -8,7 +8,6 @@ class App:
 	tinykey = ''
 	file_opt = {'filetypes':[('JPEG files', '*.jpeg;*.jpg;*.JPG;*.JPEG')]}	#file dialog options
 
-
 	def __init__(self, root):
 		root.title('Image Compressor')
 
@@ -16,7 +15,7 @@ class App:
 		self.options = Options(root, self)
 		self.menu = AppMenu(root, self)
 
-		root.state('zoomed')
+		root.geometry('800x450')
 
 		root.grid_columnconfigure(0, weight=1, uniform="a")
 		root.grid_columnconfigure(1, weight=1, uniform="a")
@@ -96,7 +95,6 @@ class FileDisplay:
 		self.txt.pack(fill=Tkinter.BOTH, side=Tkinter.LEFT, pady=5)
 		self.scrollbar.pack(side=Tkinter.LEFT, fill=Tkinter.Y, pady=5)
 		self.scrollbar.config(command=self.txt.yview)
-
 
 	def display(self, app):
 		#delete existing files from display
