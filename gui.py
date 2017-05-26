@@ -73,17 +73,25 @@ class AppMenu:
 	def __init__(self, root, app):
 		self.app = app
 
-		menubar = Tkinter.Menu(root)
+		self.menubar = Tkinter.Menu(root)
 
-		filemenu = Tkinter.Menu(menubar, tearoff=0)
-		filemenu.add_command(label='Select files', accelerator='Ctrl+S', command=app.select_files)
-		filemenu.add_command(label='Select output folder', accelerator='Ctrl+O', command=app.select_dir)
+		self.filemenu = Tkinter.Menu(self.menubar, tearoff=0)
+		self.filemenu.add_command(label='Select files', accelerator='Ctrl+S', command=app.select_files)
+		self.filemenu.add_command(label='Select output folder', accelerator='Ctrl+O', command=app.select_dir)
 
-		filemenu.add_separator()
-		filemenu.add_command(label='Exit', accelerator='Ctrl+Q', command=root.quit)
+		self.filemenu.add_separator()
+		self.filemenu.add_command(label='Exit', accelerator='Ctrl+Q', command=root.quit)
 
-		menubar.add_cascade(label='File', menu=filemenu)
-		root.config(menu=menubar)
+		self.settingsmenu = Tkinter.Menu(self.menubar, tearoff=0)
+		self.settingsmenu.add_command(label='Preferences', command=self.open_preferences)
+
+		self.menubar.add_cascade(label='File', menu=self.filemenu)
+		self.menubar.add_cascade(label='Settings', menu=self.settingsmenu)
+		root.config(menu=self.menubar)
+
+	def open_preferences(self):
+		self.pref_window = Tkinter.Toplevel()
+		self.pref_window.title('Preferences')
 
 class FileDisplay:
 
