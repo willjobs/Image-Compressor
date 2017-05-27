@@ -8,7 +8,7 @@ class App:
 	saved_out_directory = ''
 	api_key = ''
 	saved_api_key = ''
-	file_opt = {'filetypes':[('JPEG files', '*.jpeg;*.jpg;*.JPG;*.JPEG')]}	#file dialog options
+	file_opt = {'filetypes':[('JPEG files', '*.jpeg;*.jpg;*.JPG;*.JPEG')], 'initialdir':''}	#file dialog options
 
 	def __init__(self, root):
 		root.title('Image Compressor')
@@ -19,6 +19,8 @@ class App:
 		if settings.has_key('output_folder'):
 			self.saved_out_directory = settings['output_folder']
 			self.out_directory = self.saved_out_directory
+		if settings.has_key('input_folder'):
+			self.file_opt['initialdir'] = settings['input_folder']
 		settings.close()
 
 		self.file_display = FileDisplay(root, self)
@@ -103,19 +105,30 @@ class AppMenu:
 		self.pref_window = Tkinter.Toplevel()
 		self.pref_window.title('Preferences')
 
+		self.initialize_api_key()
+
+		self.initialize_output_folder()
+
+		self.initialize_input_folder()
+
+		self.initialize_save_cancel()
+
+	def initialize_api_key(self):
 		self.save_key_status = Tkinter.IntVar()
 		self.save_key_chkbtn = Tkinter.Checkbutton(self.pref_window, text='Save API key', variable=self.save_key_status, command=self.save_key_status_change)
 		self.save_key_chkbtn.grid(row=0, column=0, sticky='w')
+
 		self.key_to_save = Tkinter.Entry(self.pref_window, width=33)
-		if app.saved_api_key != '':
+		if self.app.saved_api_key != '':
 			self.save_key_chkbtn.select()
 			self.key_to_save.config(state=Tkinter.NORMAL)
 			self.key_to_save.delete(0, Tkinter.END)
-			self.key_to_save.insert(0, app.saved_api_key)
+			self.key_to_save.insert(0, self.app.saved_api_key)
 		else:
 			self.key_to_save.config(state=Tkinter.DISABLED)
 		self.key_to_save.grid(row=1, column=0, padx=5, sticky='w')
 
+	def initialize_output_folder(self):
 		self.save_out_status = Tkinter.IntVar()
 		self.save_out_chkbtn = Tkinter.Checkbutton(self.pref_window, text='Set Default Output Folder', variable=self.save_out_status, command=self.save_out_status_change)
 		self.save_out_chkbtn.grid(row=2, column=0, sticky='w', pady=(15, 0))
@@ -140,10 +153,36 @@ class AppMenu:
 		self.set_out_btn.pack(fill=Tkinter.BOTH, side=Tkinter.LEFT)
 		self.out_txt.pack(fill=Tkinter.BOTH, side=Tkinter.LEFT, padx=5)
 
+	def initialize_input_folder(self):
+		self.save_in_status = Tkinter.IntVar()
+		self.save_in_chkbtn = Tkinter.Checkbutton(self.pref_window, text='Set Default Input Folder', variable=self.save_in_status, command=self.save_in_status_change)
+		self.save_in_chkbtn.grid(row=4, column=0, sticky='w', pady=(15, 0))
+
+		in_frame = Tkinter.Frame(self.pref_window)
+		self.set_in_btn = Tkinter.Button(in_frame, text='Select Input Folder', command=self.select_default_in, state=Tkinter.DISABLED)
+		self.in_txt = Tkinter.Text(in_frame, state=Tkinter.DISABLED, height=1, width=50)
+		if self.app.file_opt['initialdir'] != '':
+			self.temp_in = self.app.file_opt['initialdir']
+
+			self.save_in_chkbtn.select()
+
+			self.set_in_btn.config(state=Tkinter.NORMAL)
+
+			self.in_txt.config(state=Tkinter.NORMAL)
+			self.in_txt.delete(1.0, Tkinter.END)
+			self.in_txt.insert(1.0, self.temp_in)
+			self.in_txt.config(state=Tkinter.DISABLED)
+		else:
+			self.temp_in = ''
+		in_frame.grid(row=5, column=0, sticky='w', padx=5)
+		self.set_in_btn.pack(fill=Tkinter.BOTH, side=Tkinter.LEFT)
+		self.in_txt.pack(fill=Tkinter.BOTH, side=Tkinter.LEFT, padx=(14, 0))
+
+	def initialize_save_cancel(self):
 		save_cancel_frame = Tkinter.Frame(self.pref_window, bd=5)
 		self.save_btn = Tkinter.Button(save_cancel_frame, text='Save', command=self.save_prefs)
 		self.cancel_btn = Tkinter.Button(save_cancel_frame, text='Cancel', command=self.cancel_prefs)
-		save_cancel_frame.grid(row=4, column=0, sticky='w', pady=(5, 0))
+		save_cancel_frame.grid(row=6, column=0, sticky='w', pady=(5, 0))
 		self.save_btn.pack(fill=Tkinter.BOTH, side=Tkinter.LEFT)
 		self.cancel_btn.pack(fill=Tkinter.BOTH, side=Tkinter.LEFT, padx=5)
 
@@ -171,12 +210,30 @@ class AppMenu:
 			self.out_txt.insert(1.0, self.temp_out)
 			self.out_txt.config(state=Tkinter.DISABLED)
 
+	def save_in_status_change(self):
+		if self.save_in_status.get():
+			self.set_in_btn.config(state=Tkinter.NORMAL)
+		else:
+			self.set_in_btn.config(state=Tkinter.DISABLED)
+			self.in_txt.config(state=Tkinter.NORMAL)
+			self.in_txt.delete(1.0, Tkinter.END)
+			self.in_txt.config(state=Tkinter.DISABLED)
+
+	def select_default_in(self):
+		self.temp_in = tkFileDialog.askdirectory()
+		if self.temp_in != '':
+			self.in_txt.config(state=Tkinter.NORMAL)
+			self.in_txt.delete(1.0, Tkinter.END)
+			self.in_txt.insert(1.0, self.temp_in)
+			self.in_txt.config(state=Tkinter.DISABLED)
+
 	def save_prefs(self):
 		self.app.saved_api_key = self.key_to_save.get()
 		self.app.saved_out_directory = self.temp_out
 
 		settings = shelve.open('settings')
 
+		##API KEY##
 		if self.save_key_status.get():
 			settings['api_key'] = self.app.saved_api_key
 			self.app.options.key.delete(0, Tkinter.END)
@@ -184,6 +241,7 @@ class AppMenu:
 		else:
 			settings['api_key'] = ''
 
+		##OUTPUT FOLDER##
 		if self.save_out_status.get():
 			self.app.out_directory = self.app.saved_out_directory		#set folder used when Apply button clicked
 			settings['output_folder'] = self.app.out_directory			#save the setting
@@ -193,6 +251,14 @@ class AppMenu:
 			self.app.options.out_dir.config(state=Tkinter.DISABLED)
 		else:
 			settings['output_folder'] = ''
+
+		##INPUT FOLDER##
+		if self.save_in_status.get():
+			settings['input_folder'] = self.temp_in
+			self.app.file_opt['initialdir'] = self.temp_in
+		else:
+			settings['input_folder'] = ''
+			self.app.file_opt['initialdir'] = ''
 
 		settings.close()
 
