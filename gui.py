@@ -1,15 +1,25 @@
-import Tkinter, tkFileDialog, tkMessageBox, sys
+import Tkinter, tkFileDialog, tkMessageBox, sys, shelve
 from PIL import Image, ImageTk
 from image_compressor import resize_and_compress
 
 class App:
 	selected_files = []
 	out_directory = ''
-	tinykey = ''
+	saved_out_directory = ''
+	api_key = ''
+	saved_api_key = ''
 	file_opt = {'filetypes':[('JPEG files', '*.jpeg;*.jpg;*.JPG;*.JPEG')]}	#file dialog options
 
 	def __init__(self, root):
 		root.title('Image Compressor')
+
+		settings = shelve.open('settings')
+		if settings.has_key('api_key'):
+			self.saved_api_key = settings['api_key']
+		if settings.has_key('output_folder'):
+			self.saved_out_directory = settings['output_folder']
+			self.out_directory = self.saved_out_directory
+		settings.close()
 
 		self.file_display = FileDisplay(root, self)
 		self.options = Options(root, self)
@@ -32,7 +42,7 @@ class App:
 		#if user clicked cancel, we won't remove previously chosen files
 		if len(f) > 0:
 			self.selected_files = f
-			self.file_display.display(self)
+			self.file_display.display()
 		#as enhancement, consider adding ability to ADD/REMOVE files, rather than simply replacing
 
 	def select_dir(self):
@@ -40,15 +50,15 @@ class App:
 		#if user clicked cancel, we won't remove previously chosen folder
 		if o != '':
 			self.out_directory = o
-			self.options.display_dir(self)
+			self.options.display_dir()
 
 	def execute(self):
-		self.tinykey = self.options.key.get()
+		self.api_key = self.options.key.get()
 
 		if len(self.selected_files) > 0:
 			if self.out_directory != '':
-				if self.tinykey != '':
-					if resize_and_compress(self.selected_files, self.out_directory, self.tinykey):
+				if self.api_key != '':
+					if resize_and_compress(self.selected_files, self.out_directory, self.api_key):
 						tkMessageBox.showinfo("Compression successful", "Success!")
 					else:
 						tkMessageBox.showerror("Error", "An error occurred.")
@@ -93,9 +103,109 @@ class AppMenu:
 		self.pref_window = Tkinter.Toplevel()
 		self.pref_window.title('Preferences')
 
+		self.save_key_status = Tkinter.IntVar()
+		self.save_key_chkbtn = Tkinter.Checkbutton(self.pref_window, text='Save API key', variable=self.save_key_status, command=self.save_key_status_change)
+		self.save_key_chkbtn.grid(row=0, column=0, sticky='w')
+		self.key_to_save = Tkinter.Entry(self.pref_window, width=33)
+		if app.saved_api_key != '':
+			self.save_key_chkbtn.select()
+			self.key_to_save.config(state=Tkinter.NORMAL)
+			self.key_to_save.delete(0, Tkinter.END)
+			self.key_to_save.insert(0, app.saved_api_key)
+		else:
+			self.key_to_save.config(state=Tkinter.DISABLED)
+		self.key_to_save.grid(row=1, column=0, padx=5, sticky='w')
+
+		self.save_out_status = Tkinter.IntVar()
+		self.save_out_chkbtn = Tkinter.Checkbutton(self.pref_window, text='Set Default Output Folder', variable=self.save_out_status, command=self.save_out_status_change)
+		self.save_out_chkbtn.grid(row=2, column=0, sticky='w', pady=(15, 0))
+
+		out_frame = Tkinter.Frame(self.pref_window)
+		self.set_out_btn = Tkinter.Button(out_frame, text='Select Output Folder', command=self.select_default_out, state=Tkinter.DISABLED)
+		self.out_txt = Tkinter.Text(out_frame, state=Tkinter.DISABLED, height=1, width=50)
+		if self.app.saved_out_directory != '':
+			self.temp_out = self.app.saved_out_directory
+
+			self.save_out_chkbtn.select()
+
+			self.set_out_btn.config(state=Tkinter.NORMAL)
+
+			self.out_txt.config(state=Tkinter.NORMAL)
+			self.out_txt.delete(1.0, Tkinter.END)
+			self.out_txt.insert(1.0, app.saved_out_directory)
+			self.out_txt.config(state=Tkinter.DISABLED)
+		else:
+			self.temp_out = ''
+		out_frame.grid(row=3, column=0, sticky='w', padx=5)
+		self.set_out_btn.pack(fill=Tkinter.BOTH, side=Tkinter.LEFT)
+		self.out_txt.pack(fill=Tkinter.BOTH, side=Tkinter.LEFT, padx=5)
+
+		save_cancel_frame = Tkinter.Frame(self.pref_window, bd=5)
+		self.save_btn = Tkinter.Button(save_cancel_frame, text='Save', command=self.save_prefs)
+		self.cancel_btn = Tkinter.Button(save_cancel_frame, text='Cancel', command=self.cancel_prefs)
+		save_cancel_frame.grid(row=4, column=0, sticky='w', pady=(5, 0))
+		self.save_btn.pack(fill=Tkinter.BOTH, side=Tkinter.LEFT)
+		self.cancel_btn.pack(fill=Tkinter.BOTH, side=Tkinter.LEFT, padx=5)
+
+	def save_key_status_change(self):
+		if self.save_key_status.get():
+			self.key_to_save.config(state=Tkinter.NORMAL)
+		else:
+			self.key_to_save.delete(0, Tkinter.END)
+			self.key_to_save.config(state=Tkinter.DISABLED)
+
+	def save_out_status_change(self):
+		if self.save_out_status.get():
+			self.set_out_btn.config(state=Tkinter.NORMAL)
+		else:
+			self.set_out_btn.config(state=Tkinter.DISABLED)
+			self.out_txt.config(state=Tkinter.NORMAL)
+			self.out_txt.delete(1.0, Tkinter.END)
+			self.out_txt.config(state=Tkinter.DISABLED)
+
+	def select_default_out(self):
+		self.temp_out = tkFileDialog.askdirectory()
+		if self.temp_out != '':
+			self.out_txt.config(state=Tkinter.NORMAL)
+			self.out_txt.delete(1.0, Tkinter.END)
+			self.out_txt.insert(1.0, self.temp_out)
+			self.out_txt.config(state=Tkinter.DISABLED)
+
+	def save_prefs(self):
+		self.app.saved_api_key = self.key_to_save.get()
+		self.app.saved_out_directory = self.temp_out
+
+		settings = shelve.open('settings')
+
+		if self.save_key_status.get():
+			settings['api_key'] = self.app.saved_api_key
+			self.app.options.key.delete(0, Tkinter.END)
+			self.app.options.key.insert(0, self.app.saved_api_key)
+		else:
+			settings['api_key'] = ''
+
+		if self.save_out_status.get():
+			self.app.out_directory = self.app.saved_out_directory		#set folder used when Apply button clicked
+			settings['output_folder'] = self.app.out_directory			#save the setting
+			self.app.options.out_dir.config(state=Tkinter.NORMAL)		#display selected folder on main window
+			self.app.options.out_dir.delete(1.0, Tkinter.END)
+			self.app.options.out_dir.insert(1.0, self.app.out_directory)
+			self.app.options.out_dir.config(state=Tkinter.DISABLED)
+		else:
+			settings['output_folder'] = ''
+
+		settings.close()
+
+		self.pref_window.destroy()
+
+	def cancel_prefs(self):
+		self.pref_window.destroy()
+
 class FileDisplay:
 
 	def __init__(self, parent, app):
+		self.app = app
+
 		self.frame = Tkinter.Frame(parent, bd=10)
 		self.frame.grid(row=0, column=0, sticky='nsew')
 
@@ -108,28 +218,31 @@ class FileDisplay:
 		self.scrollbar.pack(side=Tkinter.LEFT, fill=Tkinter.Y, pady=5)
 		self.scrollbar.config(command=self.txt.yview)
 
-	def display(self, app):
+	def display(self):
 		#delete existing files from display
 		self.txt.config(state=Tkinter.NORMAL)
 		self.txt.delete(1.0, Tkinter.END)
 
 		#add selected files to display
-		if len(app.selected_files) > 0:
-			self.txt.insert(Tkinter.END, app.selected_files[0])
-			for file in app.selected_files[1:]:
+		if len(self.app.selected_files) > 0:
+			self.txt.insert(Tkinter.END, self.app.selected_files[0])
+			for file in self.app.selected_files[1:]:
 				self.txt.insert(Tkinter.END, '\n' + file)
 		
 		self.txt.config(state=Tkinter.DISABLED)
 
 class Options:
 	def __init__(self, parent, app):
+		self.app = app
+
 		self.frame = Tkinter.Frame(parent, bd=10)
 		self.frame.grid(row=0, column=1, sticky='nsew', padx=5)
 
-		self.key_label = Tkinter.Label(self.frame, text='Tiny key: ')
+		self.key_label = Tkinter.Label(self.frame, text='API key: ')
 		self.key_label.grid(row=0, column=0, sticky='w')
 		self.key = Tkinter.Entry(self.frame, width=33)
 		self.key.grid(row=0, column=1, stick='w', padx=5)
+		self.key.insert(0, app.saved_api_key)
 
 		self.execute_button = Tkinter.Button(self.frame, text="Apply", command=app.execute)
 		self.execute_button.grid(row=2, column=0, sticky='sw')
@@ -139,11 +252,12 @@ class Options:
 
 		self.out_dir = Tkinter.Text(self.frame, state=Tkinter.DISABLED, height=1)
 		self.out_dir.grid(row=1, column=1, sticky='w', padx=5)
+		self.display_dir()
 
-	def display_dir(self, app):
+	def display_dir(self):
 		self.out_dir.config(state=Tkinter.NORMAL)
 		self.out_dir.delete(1.0, Tkinter.END)
-		self.out_dir.insert(Tkinter.END, app.out_directory)
+		self.out_dir.insert(Tkinter.END, self.app.out_directory)
 		self.out_dir.config(state=Tkinter.DISABLED)
 
 if __name__=='__main__':
