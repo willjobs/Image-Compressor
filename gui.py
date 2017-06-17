@@ -1,14 +1,15 @@
+import os
 import Tkinter, tkFileDialog, tkMessageBox, sys, shelve
 from PIL import Image, ImageTk
-from image_compressor import resize_and_compress
+from image_compressor import resize, compress, restore_EXIF_tags
 
 class App:
 	selected_files = []
-	out_directory = ''
-	saved_out_directory = ''
-	api_key = ''
-	saved_api_key = ''
-	file_opt = {'filetypes':[('JPEG files', '*.jpeg;*.jpg;*.JPG;*.JPEG')], 'initialdir':''}	#file dialog options
+	out_directory = saved_out_directory = ''
+	api_key = saved_api_key = ''
+
+	# file dialog options
+	file_opt = {'filetypes':[('JPEG files', '*.jpeg;*.jpg;*.JPG;*.JPEG')], 'initialdir':''}
 
 	def __init__(self, root):
 		root.title('Image Compressor')
@@ -57,19 +58,61 @@ class App:
 	def execute(self):
 		self.api_key = self.options.key.get()
 
-		if len(self.selected_files) > 0:
-			if self.out_directory != '':
-				if self.api_key != '':
-					if resize_and_compress(self.selected_files, self.out_directory, self.api_key):
-						tkMessageBox.showinfo("Compression successful", "Success!")
-					else:
-						tkMessageBox.showerror("Error", "An error occurred.")
-				else:
-					tkMessageBox.showerror("Error", "Enter a key.")
-			else:
-				tkMessageBox.showerror("Error", "Select an out directory.")
-		else:
+		if len(self.selected_files) == 0:
 			tkMessageBox.showerror("Error", "Select some files.")
+			return
+		if self.out_directory == '':
+			tkMessageBox.showerror("Error", "Select an out directory.")
+			return
+		if self.api_key == '':
+			tkMessageBox.showerror("Error", "Enter an API key.")
+			return
+
+
+		savings_KB = 0
+		total_orig_size = 0
+
+		for idx, file in enumerate(self.selected_files):
+			total_orig_size = total_orig_size + os.stat(file).st_size/1024.
+
+			#----------------------------------
+			# Resize
+			#----------------------------------
+			print 'Resizing "' + os.path.basename(file) + '" (' + str(idx+1) + ' of ' \
+				+ str(len(self.selected_files)) + ')... ',
+			log = resize(file, out_dir=self.out_directory, suffix='_small')
+			if not log['success']:
+				tkMessageBox.showerror("Error", log['message'])
+				return
+			else:
+				print log['message']
+				savings_KB = savings_KB + log['saved']
+
+
+			#----------------------------------
+			# Compress
+			#----------------------------------
+			print 'Compressing "' + os.path.basename(file) + '" (' + str(idx+1) + ' of ' \
+				+ str(len(self.selected_files)) + ')... ',
+			log = compress(api_key=self.api_key, file=log['result'], out_dir=self.out_directory, suffix='')
+			if not log['success']:
+				tkMessageBox.showerror("Error", log['message'])
+				return
+			else:
+				print log['message']
+				savings_KB = savings_KB + log['saved']
+
+
+			print 'Restoring EXIF tags... ',
+			restore_EXIF_tags(file, log['result'])
+			print 'Restore complete!'
+
+
+		print 'Resizing and compressing together saved ' + str(round(savings_KB,0)) + ' KB = ' \
+			+ str(round(savings_KB * 100 / total_orig_size, 1)) + '%'
+
+		tkMessageBox.showinfo("Compression successful", "Success!")
+
 
 	def select_files_key(self, event):
 		self.select_files()
@@ -294,7 +337,7 @@ class FileDisplay:
 			self.txt.insert(Tkinter.END, self.app.selected_files[0])
 			for file in self.app.selected_files[1:]:
 				self.txt.insert(Tkinter.END, '\n' + file)
-		
+
 		self.txt.config(state=Tkinter.DISABLED)
 
 class Options:

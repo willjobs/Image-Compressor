@@ -1,26 +1,19 @@
 ##############################
-# Python script to resize and compress (using TinyPNG) all images in 
-#	a directory.
+# Python module to resize and compress (using TinyPNG) all images in a directory.
 # TinyPNG API: https://tinypng.com/developers/reference/python
-# You can get a TinyPNG API key at https://tinypng.com/developers, which 
-#	lets you run up to 500 compressions/resizes per month.
-
-# inputs: jpg files selected by user
-# outputs: new jpg files in output directory as specified by user, with suffix "_small", resized to
-#	have 1200px as the max dimension (either width or height), compressed 
-#	with TinyPNG.
+#	500 compressions/resizes per month.
+# You can get a TinyPNG API key at https://tinypng.com/developers, which lets you run up to 
 ##############################
 
 import glob
 import os
 import sys
 from PIL import Image, ExifTags  # Python Image Library, does the resizing
-import errno  # used to check exception error number 
+import errno  # used to check exception error number
 import tinify  # accesses TinyPNG API
 import pyexiv2  # to restore EXIF tags after PIL strips them
 
-tinify.key = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-
+# check specified path exists; if it doesn't, create it
 # function taken from http://stackoverflow.com/a/5032238
 def make_sure_path_exists(path):
 	try:
@@ -30,11 +23,12 @@ def make_sure_path_exists(path):
 			raise
 
 
-# function used to restore the EXIF tags destroyed by PIL
 def restore_EXIF_tags(orig_file, final_file):
+	"""function used to restore the EXIF tags destroyed by PIL"""
+
 	if not os.path.isfile(orig_file) or not os.path.isfile(final_file):
 		return
-		
+
 	f1 = pyexiv2.ImageMetadata(orig_file)
 	f1.read()
 	f2 = pyexiv2.metadata.ImageMetadata(final_file)
@@ -46,104 +40,155 @@ def restore_EXIF_tags(orig_file, final_file):
 		try:
 			f2[exif_tag] = f1[exif_tag].value
 			f2.write()
-		except pyexiv2.exif.ExifValueError:
+		except (pyexiv2.exif.ExifValueError, ValueError):
 			pass
 
-def resize_and_compress(files, out_dir, key):
-	make_sure_path_exists(out_dir)
-	tinify.key = key
 
-	out_files = []
+def resize(file, out_dir='', suffix='_small', max_dim=1200, new_res=None):
+	"""Resize image using Pillow, specifically using LANCZOS, "a high-quality downsampling filter"
+	(from Pillow docs: http://pillow.readthedocs.io/en/3.0.x/reference/Image.html)
 
-	# keep track of disk space savings
-	total_size_preresize = total_size_postresize = total_size_postcompress = 0
+	Parameters
+	----------
+	file : string
+		name of input file to resize
+	out_dir : string
+		(optional) directory in which to store the output file. Default = directory of input file.
+	suffix : string
+		(optional) suffix to add to the output file name
+	max_dim : integer
+		(optional) maximum dimension on a side
+	new_res : float
+		(optional) new resolution
 
-	####################################
-	# resize with PIL (default: max dimension of 1200px--either width or height)
-	####################################
-	for idx, file in enumerate(files):
+	Returns
+	-------
+	dict
+		Contains the following keys:
+			success : bool
+				indicates whether operation was successful
+			message : string
+				if success = False, reason for failure
+				if success = True, message like 'Resize complete! (saved ## KB = ##%)'
+			result : string
+				full path of the resulting file
+			saved : float
+				space savings in KB
+	"""
 
-		print 'Resizing "' + os.path.basename(file) + '" (' + str(idx+1) + ' of ' \
-			+ str(len(files)) + ')... ',
+	if not os.path.isfile(file):
+		return {'success':False, 'message':'File does not exist', 'result':'', 'saved':0}
 
-		orig_size = os.stat(file).st_size/1024.
-		total_size_preresize = total_size_preresize + orig_size
+	if out_dir == '':
+		# use the same path as the input file
+		out_dir = os.path.split(os.path.abspath(file))[0]
+	else:
+		make_sure_path_exists(out_dir)
 
-		im = Image.open(file)
-
-		# resize using LANCZOS, "a high-quality downsampling filter" 
-		#	(from Pillow docs: http://pillow.readthedocs.io/en/3.0.x/reference/Image.html)
-		w, h = im.size
-		
-		if w > h:
-			im = im.resize((1200, int((1200.0/w)*h)), Image.LANCZOS)
-		else:
-			im = im.resize((int((1200.0/h)*w), 1200), Image.LANCZOS)
+	# out_dir + filename (without extension) + suffix + extension
+	out_file = out_dir + '/' \
+				+ os.path.splitext(os.path.basename(file))[0] + suffix + os.path.splitext(file)[1]
 
 
-		# (out_dir + filename (without extension) + "_small" + extension)
-		out_file = out_dir + '/' + os.path.splitext(os.path.basename(file))[0] + '_small' \
-					+ os.path.splitext(file)[1]
-		out_files.append(out_file)
-		im.save(out_file)
+	orig_size = os.stat(file).st_size/1024.
+	max_dim = int(max_dim)
 
-		final_size = os.stat(out_file).st_size/1024.
-		total_size_postresize = total_size_postresize + final_size
+	im = Image.open(file)
+	w, h = im.size
 
-		print 'Done! (resizing saved ' + str(round(orig_size - final_size,0)) + ' KB = ' \
-				+ str(round((orig_size - final_size) * 100.0 / orig_size, 1)) + '%)'
+	if w > h:
+		im = im.resize((max_dim, int((float(max_dim)/w)*h)), Image.LANCZOS)
+	else:
+		im = im.resize((int((float(max_dim)/h)*w), max_dim), Image.LANCZOS)
 
-	print 'Finished! Altogether, resizing saved ' + str(round(total_size_preresize - total_size_postresize, 0)) + ' KB = ' \
-		+ str(round((total_size_preresize - total_size_postresize) * 100 / total_size_preresize, 1)) + '%'
+	# note: new file has no EXIF tags
+	im.save(out_file)
 
-	####################################
-	# compress with tinyPNG
-	####################################
+	final_size = os.stat(out_file).st_size/1024.
+
+	return {'success':True,
+			'message':'Resize complete! (saved ' + str(round(orig_size - final_size, 0)) + ' KB = '\
+						+ str(round((orig_size - final_size) * 100.0 / orig_size, 1)) + '%)',
+			'result': out_file,
+			'saved': orig_size - final_size}
+
+
+def compress(api_key, file, out_dir='', suffix='_tiny' ):
+	"""Compress image using TinyPNG.
+
+	Parameters
+	----------
+	api_key : string
+		API key from TinyPNG. From https://tinypng.com/developers (available: up to 500 compressions/resizes per month)
+	file : string
+		name of input file to resize
+	out_dir : string
+		(optional) directory in which to store the output file. Default = directory of input file.
+	suffix : string
+		(optional) suffix to add to the output file name
+
+	Returns
+	-------
+	dict
+		Contains the following keys:
+			success : bool
+				indicates whether operation was successful
+			message : string
+				if success = False, reason for failure
+				if success = True, message like 'Compression complete! (saved ## KB = ##%)'
+			result : string
+				full path of the resulting file
+			saved : float
+				space savings in KB
+
+	"""
+
+	if not os.path.isfile(file):
+		return {'success':False, 'message':'File does not exist', 'result':'', 'saved':0}
+
+	if out_dir == '':
+		# use the same path as the input file
+		out_dir = os.path.split(os.path.abspath(file))[0]
+	else:
+		make_sure_path_exists(out_dir)
+
+	# out_dir + filename (without extension) + suffix + extension
+	out_file = out_dir + '/' \
+				+ os.path.splitext(os.path.basename(file))[0] + suffix + os.path.splitext(file)[1]
+
+	orig_size = os.stat(file).st_size/1024.
+
+
+	tinify.key = api_key
 
 	if tinify.compression_count >= 500:
-		print 'Cannot do any more compressions - already compressed 500 images!'
+		return {'success':False, \
+				'message':'Cannot do any more compressions - already compressed 500 images!', \
+				'result':'',
+				'saved':0}
+
+	for attempt in range(5):
+		try:
+			source = tinify.from_file(file)
+			source.to_file(out_file) # runs the compression
+			break # out of attempt loop
+
+		except tinify.AccountError, e:
+			return {'success':False, \
+					'message':"Compression limit reached! The error message is: %s" % e.message, \
+					'result':'',
+					'saved':0}
 	else:
-		
-		# NOTE: we're now using the output from the resizing step as the input to this step
-		for idx, file in enumerate(out_files):
-			for attempt in range(5):
-				try:
-					print 'Compressing "' + os.path.basename(file) + '" (' + str(idx+1) + ' of ' + str(len(files)) + ')... ',
+		# failed all attempts (no break encountered)
+		return {'success':False, \
+				'message':'Encountered ServerError five times. Aborted compression.', \
+				'result':'',
+				'saved':0}
 
-					orig_size = os.stat(file).st_size/1024.
-					
-					source = tinify.from_file(file)
-					
-					# if the PIL-resized files kept the EXIF date taken, we could use this code
-					#	to keep it during compression
-					# source = source.preserve("creation")
+	final_size = os.stat(out_file).st_size/1024.
 
-					source.to_file(file)
-
-					# restore EXIF tags (destroyed by PIL)
-					restore_EXIF_tags(orig_file = files[idx],
-									final_file = file)
-
-					
-					final_size = os.stat(file).st_size/1024.
-					total_size_postcompress = total_size_postcompress + final_size
-					
-					print 'Done! (saved ' + str(round(orig_size-final_size,0)) + ' KB = ' + str(round((orig_size-final_size)*100.0/orig_size,1)) + '%)'
-					
-					break # out of attempt loop
-
-				except tinify.AccountError, e:
-					print "Compression limit reached! The error message is: %s" % e.message
-					raise e
-
-			else:
-				# no break encountered--failed all attempts
-				raise Exception('ServerError kept happening')
-
-		print 'Finished! Compression saved ' + str(round(total_size_postresize - total_size_postcompress,0)) + ' KB = ' \
-				+ str(round((total_size_postresize - total_size_postcompress) * 100 / total_size_postresize, 1)) + '%'
-
-		print 'Resizing and compressing together saved ' + str(round(total_size_preresize - total_size_postcompress,0)) + ' KB = ' \
-				+ str(round((total_size_preresize - total_size_postcompress) * 100 / total_size_preresize, 1)) + '%'
-
-		return True
+	return {'success':True,
+			'message':'Compression complete! (saved ' + str(round(orig_size - final_size, 0)) + ' KB = '\
+						+ str(round((orig_size - final_size) * 100.0 / orig_size, 1)) + '%)',
+			'result':out_file,
+			'saved': orig_size - final_size}
