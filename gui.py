@@ -1,7 +1,11 @@
 import os
 import Tkinter, tkFileDialog, tkMessageBox, sys, shelve
 from PIL import Image, ImageTk
-from image_compressor import resize, compress, restore_EXIF_tags
+import image_compressor
+import piexif
+import warnings
+
+warnings.filterwarnings('ignore', category=UnicodeWarning)
 
 class App:
 	selected_files = []
@@ -80,7 +84,7 @@ class App:
 			#----------------------------------
 			print 'Resizing "' + os.path.basename(file) + '" (' + str(idx+1) + ' of ' \
 				+ str(len(self.selected_files)) + ')... ',
-			log = resize(file, out_dir=self.out_directory, suffix='_small')
+			log = image_compressor.resize(file, out_dir=self.out_directory, suffix='_small')
 			if not log['success']:
 				tkMessageBox.showerror("Error", log['message'])
 				return
@@ -94,7 +98,7 @@ class App:
 			#----------------------------------
 			print 'Compressing "' + os.path.basename(file) + '" (' + str(idx+1) + ' of ' \
 				+ str(len(self.selected_files)) + ')... ',
-			log = compress(api_key=self.api_key, file=log['result'], out_dir=self.out_directory, suffix='')
+			log = image_compressor.compress(api_key=self.api_key, file=log['result'], out_dir=self.out_directory, suffix='')
 			if not log['success']:
 				tkMessageBox.showerror("Error", log['message'])
 				return
@@ -103,10 +107,13 @@ class App:
 				savings_KB = savings_KB + log['saved']
 
 
-			print 'Restoring EXIF tags... ',
-			restore_EXIF_tags(file, log['result'])
-			print 'Restore complete!'
-
+			# restore EXIF tags from original file to final result (they are stripped by PIL and TinyPNG)
+			# PNGs don't have EXIF data, so skip this for them
+			if os.path.splitext(file)[1].lower() in ['.jpg','.jpeg']:
+				try:
+					piexif.transplant(file, log['result'])
+				except UnicodeWarning:
+					pass
 
 		print 'Resizing and compressing together saved ' + str(round(savings_KB,0)) + ' KB = ' \
 			+ str(round(savings_KB * 100 / total_orig_size, 1)) + '%'

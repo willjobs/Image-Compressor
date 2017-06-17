@@ -11,7 +11,6 @@ import sys
 from PIL import Image, ExifTags  # Python Image Library, does the resizing
 import errno  # used to check exception error number
 import tinify  # accesses TinyPNG API
-import pyexiv2  # to restore EXIF tags after PIL strips them
 
 # check specified path exists; if it doesn't, create it
 # function taken from http://stackoverflow.com/a/5032238
@@ -21,28 +20,6 @@ def make_sure_path_exists(path):
 	except OSError as exception:
 		if exception.errno != errno.EEXIST:
 			raise
-
-
-def restore_EXIF_tags(orig_file, final_file):
-	"""function used to restore the EXIF tags destroyed by PIL"""
-
-	if not os.path.isfile(orig_file) or not os.path.isfile(final_file):
-		return
-
-	f1 = pyexiv2.ImageMetadata(orig_file)
-	f1.read()
-	f2 = pyexiv2.metadata.ImageMetadata(final_file)
-	f2.read() # yes, we need to read the contents of the destination EXIF tags before overwriting
-	f2.modified = True
-	f2.writable = os.access(final_file, os.W_OK)
-
-	for exif_tag in f1.exif_keys:
-		try:
-			f2[exif_tag] = f1[exif_tag].value
-			f2.write()
-		except (pyexiv2.exif.ExifValueError, ValueError):
-			pass
-
 
 def resize(file, out_dir='', suffix='_small', max_dim=1200, new_res=None):
 	"""Resize image using Pillow, specifically using LANCZOS, "a high-quality downsampling filter"
