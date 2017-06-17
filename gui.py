@@ -9,7 +9,7 @@ class App:
 	api_key = saved_api_key = ''
 
 	# file dialog options
-	file_opt = {'filetypes':[('JPEG files', '*.jpeg;*.jpg;*.JPG;*.JPEG')], 'initialdir':''}
+	file_opt = {'filetypes':[('JPEGs and PNGs', '*.jpeg;*.jpg;*.png;')], 'initialdir':''}
 
 	def __init__(self, root):
 		root.title('Image Compressor')
