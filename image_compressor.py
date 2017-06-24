@@ -1,8 +1,8 @@
 ##############################
 # Python module to resize and compress (using TinyPNG) all images in a directory.
 # TinyPNG API: https://tinypng.com/developers/reference/python
+# You can get a TinyPNG API key at https://tinypng.com/developers, which lets you run up to
 #	500 compressions/resizes per month.
-# You can get a TinyPNG API key at https://tinypng.com/developers, which lets you run up to 
 ##############################
 
 import glob
@@ -138,19 +138,13 @@ def compress(api_key, file, out_dir='', suffix='_tiny' ):
 
 	tinify.key = api_key
 
-	if tinify.compression_count >= 500:
-		return {'success':False, \
-				'message':'Cannot do any more compressions - already compressed 500 images!', \
-				'result':'',
-				'saved':0}
-
 	for attempt in range(5):
 		try:
 			source = tinify.from_file(file)
 			source.to_file(out_file) # runs the compression
 			break # out of attempt loop
 
-		except tinify.AccountError, e:
+		except tinify.AccountError as e:
 			return {'success':False, \
 					'message':"Compression limit reached! The error message is: %s" % e.message, \
 					'result':'',
