@@ -20,42 +20,48 @@ import image_compressor
 
 class App:
 	def __init__(self, root):
-		root.title('Image Compressor')
-
-		logging.basicConfig(filename='log.txt', format='%(asctime)s (%(levelname)s): %(message)s', level=logging.WARNING)
-		logging.captureWarnings(True)
-		self.logger = logging.getLogger(__name__)
-
-		self.selected_files = []
-		self.file_opt = {'initialdir':'', 'filetypes':[('JPEGs and PNGs', '*.jpeg;*.jpg;*.png;')]}
-
-		# read in settings, if available
 		try:
-			with open('settings.json', 'r') as f:
-				settings = json.load(f)
-			self.api_key = settings['api_key']
-			self.out_directory = settings['output_folder']
-			self.file_opt['initialdir'] = settings['input_folder']
-		except IOError:
-			self.api_key = ''
-			self.out_directory = ''
-			self.file_opt['initialdir'] = ''
+			root.title('Image Compressor')
+
+			logging.basicConfig(filename='log.txt', format='%(asctime)s (%(levelname)s): %(message)s', level=logging.WARNING)
+			logging.captureWarnings(True)
+			self.logger = logging.getLogger(__name__)
+
+			self.selected_files = []
+			self.file_opt = {'initialdir':'', 'filetypes':[('JPEGs and PNGs', '*.jpeg;*.jpg;*.png;')]}
+
+			# read in settings, if available
+			try:
+				with open('settings.json', 'r') as f:
+					settings = json.load(f)
+				self.api_key = settings['api_key']
+				self.out_directory = settings['output_folder']
+				self.file_opt['initialdir'] = settings['input_folder']
+			except IOError:
+				self.api_key = ''
+				self.out_directory = ''
+				self.file_opt['initialdir'] = ''
 
 
-		root.bind_all('<Control-q>', self.exit)
+			root.bind_all('<Control-q>', self.exit)
 
-		self.make_GUI(root)
+			self.make_GUI(root)
 
-	def save_setting(self, setting_name, val):
+		except Exception as e:
+			logging.error(e, exc_info=True)
+			messagebox.showerror(e.__class__.__name__, str(e))
+			sys.exit(0)
+
+	def save_settings(self, new_settings = {}):
 		try:
-
 			try:
 				with open('settings.json', 'r') as f:
 					settings = json.load(f)
 			except IOError:
 				settings = {}
 
-			settings[setting_name] = val
+			for key, val in new_settings.items():
+				settings[key] = val
 
 			with open('settings.json', 'w') as f:
 				json.dump(settings, f)
@@ -184,7 +190,7 @@ class App:
 			#if user clicked cancel, we won't remove previously chosen folder
 			if o != '':
 				self.out_directory = o
-				self.save_setting('output_folder', o)
+				self.save_settings({'output_folder': o})
 				self.display_out_dir()
 		except Exception as e:
 			self.logger.error(e, exc_info=True)
@@ -202,11 +208,11 @@ class App:
 				#	as input_folder and	possibly output_folder (if out_directory not already specified)
 				first_file_dir = os.path.split(os.path.abspath(f[0]))[0]
 				self.file_opt['initialdir'] = first_file_dir
-				self.save_setting('input_folder', first_file_dir)
+				self.save_settings({'input_folder': first_file_dir})
 
 				if self.out_directory == '':
 					self.out_directory = first_file_dir
-					self.save_setting('output_folder', first_file_dir)
+					self.save_settings({'output_folder': first_file_dir})
 					self.display_out_dir()
 
 				self.display_files()
@@ -236,7 +242,7 @@ class App:
 	def execute(self):
 		try:
 			self.api_key = self.key_txt.get()
-			self.save_setting('api_key', self.api_key)
+			self.save_settings({'api_key': self.api_key})
 
 			if len(self.selected_files) == 0:
 				messagebox.showerror("Error", "Select some files.")
