@@ -98,14 +98,16 @@ class App:
 
 			self.compress_var = BooleanVar()
 			self.compress_var.set(True)
-			self.compress_chk = ttk.Checkbutton(self.top_left_frame, text="compress?", \
-												variable=self.compress_var, onvalue=True, offvalue=False)
+			self.compress_chk = ttk.Checkbutton(self.top_left_frame, text="compress?",
+												variable=self.compress_var, command=self.toggle_compress,
+												onvalue=True, offvalue=False)
 			self.compress_chk.grid(row=0, column=0, sticky="nw", padx=5, pady=5)
 
 			self.resize_var = BooleanVar()
 			self.resize_var.set(True)
-			self.resize_chk = ttk.Checkbutton(self.top_left_frame, text="resize?", \
-												variable=self.resize_var, onvalue=True, offvalue=False)
+			self.resize_chk = ttk.Checkbutton(self.top_left_frame, text="resize?",
+												variable=self.resize_var, command=self.toggle_resize,
+												onvalue=True, offvalue=False)
 			self.resize_chk.grid(row=1, column=0, sticky="nw", padx=5, pady=5)
 
 			self.api_key_lbl = ttk.Label(self.top_right_frame, text='TinyPNG API key')
@@ -179,6 +181,14 @@ class App:
 		except Exception as e:
 			self.logger.error(e, exc_info=True)
 			messagebox.showerror(e.__class__.__name__, str(e))
+
+	def toggle_resize(self):
+		self.dim_txt.config(state = 'normal' if self.resize_var.get() else 'disabled')
+		self.dim_units_combo.config(state = 'normal' if self.resize_var.get() else 'disabled')
+		self.res_txt.config(state = 'normal' if self.resize_var.get() else 'disabled')
+
+	def toggle_compress(self):
+		self.api_key_txt.config(state = 'normal' if self.compress_var.get() else 'disabled')
 
 	def select_out_dir(self):
 		try:
