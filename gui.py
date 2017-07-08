@@ -17,7 +17,6 @@ import piexif
 import image_compressor
 
 
-
 class App:
 	def __init__(self, root):
 		try:
@@ -30,22 +29,22 @@ class App:
 			self.selected_files = []
 			self.file_opt = {'initialdir':'', 'filetypes':[('JPEGs and PNGs', '*.jpeg;*.jpg;*.png;')]}
 
+			root.bind_all('<Control-q>', self.exit)
+
+			self.make_GUI(root)
+
 			# read in settings, if available
 			try:
 				with open('settings.json', 'r') as f:
 					settings = json.load(f)
-				self.api_key = settings['api_key']
-				self.out_directory = settings['output_folder']
+
+				self.api_key_var.set(settings['api_key'])
+				self.out_dir_var.set(settings['output_folder'])
 				self.file_opt['initialdir'] = settings['input_folder']
 			except IOError:
-				self.api_key = ''
-				self.out_directory = ''
+				self.api_key_var.set('')
+				self.out_dir_var.set('')
 				self.file_opt['initialdir'] = ''
-
-
-			root.bind_all('<Control-q>', self.exit)
-
-			self.make_GUI(root)
 
 		except Exception as e:
 			logging.error(e, exc_info=True)
@@ -69,6 +68,9 @@ class App:
 		except Exception as e:
 			self.logger.error(e, exc_info=True)
 			messagebox.showerror(e.__class__.__name__, str(e))
+
+	def int_validate(self, S):
+		return S=='' or S.isdigit()
 
 	def make_GUI(self, root):
 		try:
@@ -106,19 +108,21 @@ class App:
 												variable=self.resize_var, onvalue=True, offvalue=False)
 			self.resize_chk.grid(row=1, column=0, sticky="nw", padx=5, pady=5)
 
-			self.key_lbl = ttk.Label(self.top_right_frame, text='TinyPNG API key')
-			self.key_lbl.grid(row=0, column=0, sticky="nw", padx=5, pady=5)
+			self.api_key_lbl = ttk.Label(self.top_right_frame, text='TinyPNG API key')
+			self.api_key_lbl.grid(row=0, column=0, sticky="nw", padx=5, pady=5)
 
-			self.key_var = StringVar()
-			self.key_txt = ttk.Entry(self.top_right_frame, width=40, textvariable=self.key_var)
-			self.key_txt.grid(row=0, column=1, columnspan=2, sticky="nw", padx=5, pady=5)
-			self.key_txt.insert(0, self.api_key)
+			self.api_key_var = StringVar()
+			self.api_key_txt = Entry(self.top_right_frame, width=40, textvariable=self.api_key_var)
+			self.api_key_txt.grid(row=0, column=1, columnspan=2, sticky="nw", padx=5, pady=5)
 
 			self.dim_lbl = ttk.Label(self.top_right_frame, text="Max dimension")
 			self.dim_lbl.grid(row=1, column=0, sticky="nw", padx=5, pady=5)
 
+			intcmd = (self.top_right_frame.register(self.int_validate), '%S')
+
 			self.dim_var = StringVar()
-			self.dim_txt = ttk.Entry(self.top_right_frame, width=10, textvariable=self.dim_var)
+			self.dim_txt = ttk.Entry(self.top_right_frame, width=10, textvariable=self.dim_var,
+									validate='key', validatecommand=intcmd)
 			self.dim_txt.grid(row=1, column=1, sticky="nw", padx=5, pady=5)
 
 			self.dim_units_var = StringVar()
@@ -131,7 +135,8 @@ class App:
 			self.res_lbl.grid(row=2, column=0, sticky="nw", padx=5, pady=5)
 
 			self.res_var = StringVar()
-			self.res_txt = ttk.Entry(self.top_right_frame, width=10, textvariable=self.res_var)
+			self.res_txt = ttk.Entry(self.top_right_frame, width=10, textvariable=self.res_var,
+									validate='key', validatecommand=intcmd)
 			self.res_txt.grid(row=2, column=1, sticky="nw", padx=5, pady=5)
 
 			############################################################
@@ -160,9 +165,9 @@ class App:
 			self.out_dir_lbl = ttk.Label(self.bottom_frame, text="Output to")
 			self.out_dir_lbl.grid(row=0, column=0, sticky='nw')
 
-			self.out_dir_txt = Text(self.bottom_frame, height=1, width=50)
+			self.out_dir_var = StringVar()
+			self.out_dir_txt = ttk.Entry(self.bottom_frame, width=50, textvariable=self.out_dir_var)
 			self.out_dir_txt.grid(row=0, column=1, sticky='nw', padx=5)
-			self.display_out_dir()
 
 			self.out_dir_btn = ttk.Button(self.bottom_frame, text='Browse...', command=self.select_out_dir)
 			self.out_dir_btn.grid(row=0, column=2, sticky='ne', padx=5)
@@ -175,23 +180,14 @@ class App:
 			self.logger.error(e, exc_info=True)
 			messagebox.showerror(e.__class__.__name__, str(e))
 
-	def display_out_dir(self):
-		try:
-			self.out_dir_txt.delete(1.0, END)
-			self.out_dir_txt.insert(END, self.out_directory)
-		except Exception as e:
-			self.logger.error(e, exc_info=True)
-			messagebox.showerror(e.__class__.__name__, str(e))
-
 	def select_out_dir(self):
 		try:
 			o = filedialog.askdirectory()
 
 			#if user clicked cancel, we won't remove previously chosen folder
 			if o != '':
-				self.out_directory = o
+				self.out_dir_var.set(o)
 				self.save_settings({'output_folder': o})
-				self.display_out_dir()
 		except Exception as e:
 			self.logger.error(e, exc_info=True)
 			messagebox.showerror(e.__class__.__name__, str(e))
@@ -208,13 +204,14 @@ class App:
 				#	as input_folder and	possibly output_folder (if out_directory not already specified)
 				first_file_dir = os.path.split(os.path.abspath(f[0]))[0]
 				self.file_opt['initialdir'] = first_file_dir
-				self.save_settings({'input_folder': first_file_dir})
 
-				if self.out_directory == '':
-					self.out_directory = first_file_dir
-					self.save_settings({'output_folder': first_file_dir})
-					self.display_out_dir()
-
+				if self.out_dir_var.get() == '':
+					self.out_dir_var.set(first_file_dir)
+					self.save_settings({'input_folder': first_file_dir, 
+										'output_folder': first_file_dir})
+				else:
+					self.save_settings({'input_folder': first_file_dir})
+					
 				self.display_files()
 		except Exception as e:
 			self.logger.error(e, exc_info=True)
@@ -241,18 +238,18 @@ class App:
 
 	def execute(self):
 		try:
-			self.api_key = self.key_txt.get()
-			self.save_settings({'api_key': self.api_key})
-
 			if len(self.selected_files) == 0:
 				messagebox.showerror("Error", "Select some files.")
 				return
-			if self.out_directory == '':
+			if self.out_dir_var.get() == '':
 				messagebox.showerror("Error", "Select an out directory.")
 				return
-			if self.api_key == '':
+			if self.api_key_var.get() == '':
 				messagebox.showerror("Error", "Enter an API key.")
 				return
+
+			self.save_settings({'api_key': self.api_key_var.get(), 
+								'output_folder': self.out_dir_var.get()})
 
 			savings_KB = 0
 			total_orig_size = 0
@@ -266,7 +263,7 @@ class App:
 				if self.resize_var.get():
 					print('Resizing "' + os.path.basename(file) + '" (' + str(idx+1) + ' of ' \
 						+ str(len(self.selected_files)) + ')... ', end='')
-					log = image_compressor.resize(file, out_dir=self.out_directory, suffix='_small')
+					log = image_compressor.resize(file, out_dir=self.out_dir_var.get(), suffix='_small')
 					if not log['success']:
 						messagebox.showerror("Error", log['message'])
 						return
@@ -281,8 +278,11 @@ class App:
 				if self.compress_var.get():
 					print('Compressing "' + os.path.basename(file) + '" (' + str(idx+1) + ' of ' \
 						+ str(len(self.selected_files)) + ')... ', end='')
-					log = image_compressor.compress(api_key=self.api_key, file=log['result'], \
-													out_dir=self.out_directory, suffix='')
+
+					in_file = log['result'] if 'log' in locals() else file
+					
+					log = image_compressor.compress(api_key=self.api_key_var.get(), file=in_file, \
+													out_dir=self.out_dir_var.get(), suffix='')
 					if not log['success']:
 						messagebox.showerror("Error", log['message'])
 						return
@@ -295,7 +295,12 @@ class App:
 				# PNGs don't have EXIF data, so skip this for them
 				# Also, sometimes you get EXIF warnings from the piexif library when it tries to copy Unicode. Ignore those.
 				if os.path.splitext(file)[1].lower() in ['.jpg','.jpeg']:
-					piexif.transplant(file, log['result'])
+					try:
+						piexif.transplant(file, log['result'])
+					except Exception as e:
+						# log the error, but not an issue (source might not have EXIF data)
+						self.logger.error(e, exc_info=True)
+
 
 			msg = 'Saved a total of ' + str(round(savings_KB, 0)) + ' KB = ' \
 				+ str(round(savings_KB * 100 / total_orig_size, 1)) + '%'
