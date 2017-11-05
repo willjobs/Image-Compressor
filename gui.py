@@ -273,7 +273,16 @@ class App:
 				if self.resize_var.get():
 					print('Resizing "' + os.path.basename(file) + '" (' + str(idx+1) + ' of ' \
 						+ str(len(self.selected_files)) + ')... ', end='')
-					log = image_compressor.resize(file, out_dir=self.out_dir_var.get(), suffix='_small')
+
+					max_dim = self.dim_var.get()
+					try:
+						max_dim = int(max_dim)
+					except:
+						max_dim = None
+
+					log = image_compressor.resize(file, out_dir=self.out_dir_var.get(), 
+													suffix='_small', max_dim = max_dim)
+
 					if not log['success']:
 						messagebox.showerror("Error", log['message'])
 						return
