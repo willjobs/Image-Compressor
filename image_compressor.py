@@ -67,10 +67,13 @@ def resize(file, out_dir='', suffix='_small', max_dim=None, max_dim_units='px', 
 	except:
 		max_dim = 1200
 
+	max_dim_units = max_dim_units.lower() if max_dim_units in ['px','in','cm'] else 'px'
+
 	try:
 		int(new_res)
 	except:
 		new_res = None
+
 
 	# out_dir + filename (without extension) + suffix + extension
 	out_file = out_dir + '/' \

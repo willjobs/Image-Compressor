@@ -1,0 +1,31 @@
+tests:
+
+command line:
+-i
+	-i without input folder --> error
+	-i with bad input folder --> error
+	-i with empty input folder --> error
+	missing -i option --> error (or GUI if no additional args)
+	-i with good input folder --> OK
+
+-o
+	-o without output folder --> error
+	-o with badly formed output folder --> error
+	-o with output folder that does not exist --> make the folder
+	-o with existing output folder --> output into this folder
+	missing -o --> OK (use input_folder)
+
+resize
+	-resize without -d --> assume 1200px
+	-resize with non-integer -d --> error
+	-resize not specified, -compress is --> only compress
+	-neither -resize nor -compress --> resize, don't compress
+	-both -resize and -compress --> resize and compress
+	-resize with good -d --> use this d
+
+-compress
+	-compress without -k --> error
+	-compress with bad -k --> error
+	-compress with good -k --> compress
+
+gui
