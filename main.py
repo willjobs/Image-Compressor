@@ -178,7 +178,7 @@ class ImageCompressor:
 	def toggle_resize(self):
 		self.dim_txt.config(state='normal' if self.resize_var.get() else 'disabled')
 		self.dim_units_combo.config(state='normal' if self.resize_var.get() else 'disabled')
-		self.res_txt.config(state='normal' if self.resize_var.get() else 'disabled')
+		#self.res_txt.config(state='normal' if self.resize_var.get() else 'disabled')
 
 	def toggle_compress(self):
 		self.api_key_txt.config(state='normal' if self.compress_var.get() else 'disabled')
@@ -204,7 +204,7 @@ class ImageCompressor:
 				self.selected_files = self.selected_files + list(f)
 
 				# use directory of first file of selected files as initialdir, and save it
-				#    as input_folder and possibly output_folder (if out_directory not already specified)
+				# as input_folder and possibly output_folder (if out_directory not already specified)
 				first_file_dir = os.path.split(os.path.abspath(f[0]))[0]
 				self.file_opt['initialdir'] = first_file_dir
 
@@ -245,6 +245,7 @@ class ImageCompressor:
 
 		for idx, file in enumerate(files):
 			total_orig_size = total_orig_size + os.stat(file).st_size / 1024.
+			log = None
 
 			if(resize and max_dim is not None and str(max_dim).isdigit()):
 				print('Resizing "' + os.path.basename(file) + '" (' + str(idx + 1) + ' of ' \
@@ -266,7 +267,7 @@ class ImageCompressor:
 				print('Compressing "' + os.path.basename(file) + '" (' + str(idx + 1) + ' of ' \
 					+ str(len(files)) + ')... ', end='')
 
-				in_file = log['result'] if 'log' in locals() else file
+				in_file = log['result'] if log is not None else file
 
 				log = image_compressor.compress(api_key=api_key, file=in_file,
 												out_dir=out_dir, suffix='')
